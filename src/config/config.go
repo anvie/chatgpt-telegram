@@ -14,16 +14,30 @@ type Config struct {
 	OpenAISession string
 }
 
+func filExists(path string) bool {
+	if _, err := os.Stat(path); err == nil {
+		return true
+	}
+	return false
+}
+
+
 // LoadOrCreatePersistentConfig uses the default config directory for the current OS
 // to load or create a config file named "chatgpt.json"
-func LoadOrCreatePersistentConfig() (*Config, error) {
+func LoadOrCreatePersistentConfig(configName string) (*Config, error) {
 	configPath, err := os.UserConfigDir()
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("Couldn't get user config dir: %v", err))
 	}
+
+	// check is file exists
+	if !filExists(configPath + "/" + configName + ".json") {
+		return nil, errors.New(fmt.Sprintf("Couldn't find config file: %v", err))
+	}
+
 	v := viper.New()
 	v.SetConfigType("json")
-	v.SetConfigName("chatgpt")
+	v.SetConfigName(configName)
 	v.AddConfigPath(configPath)
 
 	if err := v.ReadInConfig(); err != nil {

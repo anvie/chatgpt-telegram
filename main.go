@@ -14,25 +14,40 @@ import (
 	"github.com/m1guelpf/chatgpt-telegram/src/tgbot"
 )
 
+type ChatGPTAgents struct {
+	Agents []*chatgpt.ChatGPT
+}
+
+
 func main() {
-	persistentConfig, err := config.LoadOrCreatePersistentConfig()
-	if err != nil {
-		log.Fatalf("Couldn't load config: %v", err)
-	}
 
-	if persistentConfig.OpenAISession == "" {
-		token, err := session.GetSession()
+	agents := ChatGPTAgents{}
+	agentLoadedCount := int64(0)
+
+	for i := 1; i <= 3; i++ {
+		chatgptConfig := fmt.Sprintf("chatgpt%d", i)
+		persistentConfig, err := config.LoadOrCreatePersistentConfig(chatgptConfig)
 		if err != nil {
-			log.Fatalf("Couldn't get OpenAI session: %v", err)
+			log.Println("Couldn't load config: %v", err)
+			break;
 		}
 
-		if err = persistentConfig.SetSessionToken(token); err != nil {
-			log.Fatalf("Couldn't save OpenAI session: %v", err)
+		if persistentConfig.OpenAISession == "" {
+			token, err := session.GetSession()
+			if err != nil {
+				log.Fatalf("Couldn't get OpenAI session: %v", err)
+			}
+
+			if err = persistentConfig.SetSessionToken(token); err != nil {
+				log.Fatalf("Couldn't save OpenAI session: %v", err)
+			}
 		}
+
+		chatGPT := chatgpt.Init(persistentConfig)
+		agents.Agents = append(agents.Agents, chatGPT)
+		agentLoadedCount++
+		log.Printf("Started ChatGPT %d!", i)
 	}
-
-	chatGPT := chatgpt.Init(persistentConfig)
-	log.Println("Started ChatGPT")
 
 	envConfig, err := config.LoadEnvConfig(".env")
 	if err != nil {
@@ -75,8 +90,14 @@ func main() {
 			continue
 		}
 
+		agentIndex := updateUserID % agentLoadedCount
+
+		fmt.Printf("incoming chat, handled using agent index: %d\n", agentIndex)
+
 		if !update.Message.IsCommand() {
 			bot.SendTyping(updateChatID)
+
+			chatGPT := agents.Agents[agentIndex]
 
 			feed, err := chatGPT.SendMessage(updateText, updateChatID)
 			if err != nil {
@@ -94,6 +115,7 @@ func main() {
 		case "start":
 			text = "Send a message to start talking with ChatGPT. You can use /reload at any point to clear the conversation history and start from scratch (don't worry, it won't delete the Telegram messages)."
 		case "reload":
+			chatGPT := agents.Agents[agentIndex]
 			chatGPT.ResetConversation(updateChatID)
 			text = "Started a new conversation. Enjoy!"
 		default:
