@@ -32,7 +32,7 @@ func LoadOrCreatePersistentConfig(configName string) (*Config, error) {
 
 	// check is file exists
 	if !filExists(configPath + "/" + configName + ".json") {
-		return nil, errors.New(fmt.Sprintf("Couldn't find config file: %v", err))
+		return nil, errors.New(fmt.Sprintf("Couldn't find config file: %s", configName))
 	}
 
 	v := viper.New()

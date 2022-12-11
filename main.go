@@ -24,11 +24,11 @@ func main() {
 	agents := ChatGPTAgents{}
 	agentLoadedCount := int64(0)
 
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= 10; i++ {
 		chatgptConfig := fmt.Sprintf("chatgpt%d", i)
 		persistentConfig, err := config.LoadOrCreatePersistentConfig(chatgptConfig)
 		if err != nil {
-			log.Println("Couldn't load config: %v", err)
+			log.Println(err)
 			break;
 		}
 
